@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#101b29" />
+  <meta name="description" content="A live weekly schedule dashboard with a Singapore clock, activity countdowns and daily progress tracking." />
+  <title>Rhythm — My Weekly Schedule</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap');
+    :root {
+      --ink: #172334; --ink-muted: #7e8b9a; --surface: #fff; --surface-soft: #f7f9fa;
+      --stroke: #e9edf1; --canvas: #f5f7fa; --brand: #2cb7a8; --deep: #122437;
+      --shadow: 0 14px 38px rgba(20, 43, 67, .045);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--canvas);color:var(--ink);font-family:'DM Sans',system-ui,-apple-system,Segoe UI,sans-serif;font-size:14px;-webkit-font-smoothing:antialiased}
+    button{font:inherit;cursor:pointer}button:focus-visible,input:focus-visible{outline:3px solid #43c5b8;outline-offset:3px}
+    .app{display:grid;grid-template-columns:242px minmax(0,1fr);min-height:100vh}
+    .sidebar{background:#111d2c;color:#fff;padding:34px 22px 25px;display:flex;flex-direction:column;gap:44px;position:sticky;top:0;height:100vh;overflow:auto}
+    .logo{display:flex;align-items:center;gap:11px;padding-left:8px}
+    .logo-mark{height:40px;width:40px;border-radius:14px;background:#38c2b2;display:grid;place-items:center;box-shadow:0 6px 22px rgba(56,194,178,.22)}
+    .logo-text{font:800 24px 'Outfit',sans-serif;letter-spacing:-1.2px}.logo-text span{color:#4ed0c1}
+    .side-label{padding-left:14px;color:#687c91;font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px}
+    .nav{display:flex;flex-direction:column;gap:7px}.nav-btn{width:100%;border:0;background:transparent;color:#9babbd;text-align:left;padding:13px 14px;border-radius:13px;display:flex;align-items:center;gap:13px;font-size:13px;font-weight:700;transition:background .2s,color .2s}
+    .nav-btn:hover{background:#1e3043;color:#fff}.nav-btn.active{color:#fff;background:#24384c}.nav-btn.active .nav-icon{color:#49cdbe}
+    .nav-icon{font-size:18px;width:22px;text-align:center;line-height:1}
+    .sidebar-bottom{margin-top:auto;background:#1b2b3e;border:1px solid #283a4f;border-radius:18px;padding:17px}
+    .sb-top{display:flex;align-items:center;gap:10px;color:#dfebf2;font-size:12px;font-weight:700}.sb-top .sun{background:#305466;color:#67d4c5;border-radius:10px;padding:8px;font-size:15px}
+    .sb-title{font:700 19px 'Outfit',sans-serif;margin:16px 0 4px}.sb-desc{color:#91a6b9;line-height:1.7;font-size:12px;margin:0}
+    .sb-pill{font-size:10px;background:#254b52;color:#80edda;border-radius:30px;padding:6px 10px;display:inline-block;margin-top:15px;font-weight:800}
+    .side-foot{color:#52677b;font-size:11px;text-align:center}
+    .main{min-width:0;padding:35px clamp(22px,4vw,62px) 64px;max-width:1650px;width:100%;margin:0 auto}
+    .topbar,.top-right,.heading-row,.between,.section-title{display:flex;align-items:center;justify-content:space-between;gap:16px}
+    .eyebrow{font-size:11px;letter-spacing:2px;color:#8794a1;font-weight:800;text-transform:uppercase}
+    .page-title{font:800 clamp(27px,3vw,37px)/1.1 'Outfit',sans-serif;margin:8px 0 0;letter-spacing:-1.1px}
+    .top-right{gap:15px}.tz{font-size:12px;color:#8595a3;font-weight:700;white-space:nowrap}.clock{background:#fff;border:1px solid #ebf0f3;border-radius:14px;padding:12px 16px;text-align:right;box-shadow:var(--shadow);min-width:164px}
+    .clock-time{font:700 19px/1 'Outfit',sans-serif;font-variant-numeric:tabular-nums;letter-spacing:.2px}.clock-date{color:#92a0ae;font-size:10px;font-weight:700;margin-top:5px}
+    .hero{margin-top:29px;border-radius:25px;padding:30px 34px;background:linear-gradient(115deg,#132536 2%,#183e49 61%,#185c5b 120%);color:#fff;min-height:255px;position:relative;overflow:hidden;box-shadow:0 22px 45px rgba(20,51,61,.1)}
+    .hero::before,.hero::after{content:'';position:absolute;border:1px solid rgba(120,225,210,.14);border-radius:50%;pointer-events:none}.hero::before{height:460px;width:460px;right:-92px;top:-180px}.hero::after{height:320px;width:320px;right:-18px;top:-110px}
+    .hero-inner{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(225px,.67fr);gap:32px;height:100%}
+    .live-indicator{display:inline-flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:1.7px;font-size:10px;font-weight:800;color:#80ebd4}
+    .pulse{height:7px;width:7px;background:#6ce4d0;border-radius:50%;box-shadow:0 0 0 4px rgba(108,228,208,.12);animation:pulse 2s infinite}
+    @keyframes pulse{50%{box-shadow:0 0 0 8px rgba(108,228,208,.02)}}
+    .hero-title{font:700 clamp(27px,3.45vw,44px)/1.16 'Outfit',sans-serif;letter-spacing:-1.15px;margin:24px 0 12px;max-width:550px}
+    .hero-description{color:#a9c3c8;line-height:1.6;font-size:13px;margin:0 0 23px}
+    .hero-prog-track{width:min(100%,360px);background:rgba(255,255,255,.13);height:7px;border-radius:9px;overflow:hidden}.hero-prog-fill{height:100%;width:0;background:#6fe3ca;border-radius:9px;transition:width .75s linear}
+    .hero-prog-caption{font-size:11px;color:#a4c2c5;margin-top:10px}
+    .next-card{align-self:center;border:1px solid rgba(176,237,229,.21);background:rgba(255,255,255,.055);border-radius:20px;padding:23px 23px 21px;backdrop-filter:blur(6px);min-height:176px}
+    .next-label{color:#88c3c4;font-size:10px;text-transform:uppercase;letter-spacing:2px;font-weight:800}.next-time{font:700 26px 'Outfit',sans-serif;margin-top:15px}.next-name{font-weight:700;font-size:14px;margin-top:7px}.next-count{margin-top:20px;color:#9cc8c8;font-size:11px;font-weight:700}
+    .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:23px}
+    .stat{background:#fff;border-radius:19px;border:1px solid #ecf0f3;box-shadow:var(--shadow);min-height:125px;padding:23px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .stat-label{font-weight:700;color:#8d99a7;font-size:12px}.stat-number{font:700 29px/1.1 'Outfit',sans-serif;margin-top:11px;letter-spacing:-.75px}.stat-foot{font-size:11px;color:#90a0ad;margin-top:7px}
+    .stat-icon{width:46px;height:46px;flex-shrink:0;border-radius:15px;display:grid;place-items:center;font-size:23px}.stat-icon.teal{background:#e5f9f4;color:#23aa97}.stat-icon.purple{background:#f0edff;color:#8674d5}.stat-icon.orange{background:#fff2e6;color:#eea95b}
+    .body-section{margin-top:37px}.section-title{margin-bottom:19px;align-items:end}
+    .section-title h2{font:750 22px 'Outfit',sans-serif;margin:0;letter-spacing:-.4px}.section-sub{font-size:12px;color:#97a4b1;margin-top:5px}
+    .tiny-btn{border:1px solid #e4eaf0;background:#fff;color:#586d7f;border-radius:10px;padding:10px 14px;font-size:12px;font-weight:800;transition:all .18s;white-space:nowrap}.tiny-btn:hover{border-color:#95d7d1;background:#f4fcfa}.tiny-btn.primary{color:#187f77;border-color:#a5e9de;background:#eafaf7}
+    .days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px}.day-btn{background:#fff;color:#718193;border:1px solid #e6edf1;border-radius:16px;padding:17px 8px 16px;text-align:center;min-width:0;transition:all .2s;position:relative}
+    .day-btn:hover{border-color:#69cfc3;transform:translateY(-2px)}.day-btn.selected{background:#17374a;color:#fff;border-color:#17374a;box-shadow:0 10px 23px rgba(22,53,72,.12)}
+    .day-short{font-size:11px;text-transform:uppercase;font-weight:800;letter-spacing:1.3px}.day-date{font:750 27px 'Outfit',sans-serif;margin-top:7px;line-height:1.2}.day-btn.today:not(.selected):after{content:'';position:absolute;bottom:7px;left:calc(50% - 3px);height:6px;width:6px;background:#38c2b2;border-radius:50%}.day-btn.selected.today:after{background:#84f0df;content:'';position:absolute;bottom:7px;left:calc(50% - 3px);height:6px;width:6px;border-radius:50%}
+    .planner{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(250px,.78fr);gap:22px;margin-top:27px;align-items:start}
+    .panel{background:#fff;border:1px solid #ecf0f3;border-radius:22px;box-shadow:var(--shadow);min-width:0;overflow:hidden}
+    .panel-head{padding:24px 27px 20px;border-bottom:1px solid #eef1f4;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .panel-head h3{font:750 20px 'Outfit',sans-serif;margin:0;letter-spacing:-.4px}.panel-head p{margin:5px 0 0;color:#98a6b2;font-size:11px}
+    .view-toggle{background:#f1f4f6;display:flex;gap:2px;padding:4px;border-radius:11px}
+    .view-toggle button{background:transparent;border:0;border-radius:8px;color:#8e9ba8;padding:7px 12px;font-weight:800;font-size:11px}.view-toggle button.active{background:white;color:#21374a;box-shadow:0 2px 7px rgba(13,41,62,.09)}
+    .event-list{padding:5px 23px 21px}.event{position:relative;display:grid;grid-template-columns:78px 15px minmax(0,1fr) 26px;column-gap:12px;align-items:center;min-height:69px}
+    .event:not(:last-child):before{content:'';position:absolute;left:96px;top:38px;bottom:-29px;border-left:1px dashed #e0e7ec;z-index:0}
+    .time{color:#91a0ac;font-weight:700;font-size:11px;text-align:right;font-variant-numeric:tabular-nums}.dot{width:10px;height:10px;border-radius:50%;background:#dfe6eb;border:3px solid white;box-shadow:0 0 0 1px #e2e8ed;z-index:1;justify-self:center}
+    .event-main{min-width:0;padding:13px 12px;border-radius:11px;border:1px solid transparent;display:flex;align-items:center;gap:9px;justify-content:space-between}
+    .event-title{font-weight:800;font-size:12px;line-height:1.5}.event-dur{font-size:10px;color:#9daab6;font-weight:700;margin-top:3px}.category{display:inline-flex;flex-shrink:0;max-width:100px;font-weight:800;font-size:9px;border-radius:7px;padding:5px 8px;white-space:nowrap}
+    .event.current .event-main{background:#edfaf7;border:1px solid #bdebe2}.event.current .dot{background:#36bea9;box-shadow:0 0 0 4px #dbf7f0;border:2px solid white}.event.current .event-title{color:#14796c}
+    .event.done .event-title{text-decoration:line-through;color:#a2aeb7}.event.done .dot{background:#49bdaf;box-shadow:0 0 0 1px #49bdaf}.event.done .event-main{opacity:.65}
+    .category.workout{background:#ffefe8;color:#e58b62}.category.study{background:#eaf0ff;color:#6b81d4}.category.class{background:#f0eafe;color:#8c6acb}.category.meal{background:#fff5e1;color:#bf9144}.category.travel{background:#edf1f4;color:#758999}.category.personal{background:#e9faf1;color:#55a182}.category.volunteer{background:#fef0f1;color:#d77980}.category.faith{background:#f4ecff;color:#9674bf}.category.rest{background:#e9f1f9;color:#7390b6}
+    .checkbox{appearance:none;-webkit-appearance:none;width:20px;height:20px;border:1.7px solid #d2dde3;background:white;border-radius:7px;position:relative;cursor:pointer;transition:all .15s;flex-shrink:0}
+    .checkbox:checked{background:#35bba8;border-color:#35bba8}.checkbox:checked:after{content:'✓';position:absolute;top:-2px;left:3px;color:#fff;font-weight:900;font-size:15px}
+    .now-tag{font-size:9px;font-weight:900;color:#14917f;letter-spacing:.6px;margin-left:4px}
+    .event-spacer{padding:13px 10px 13px 107px;color:#a4b0bc;font-size:10px;font-style:italic}
+    .sidepanel{padding:25px 24px}.sidepanel h3{font:750 20px 'Outfit',sans-serif;margin:0 0 5px}.sidepanel .subtitle{color:#9ca9b5;font-size:11px;line-height:1.6;margin:0 0 24px}
+    .ring-area{display:flex;justify-content:center;margin:14px 0 23px}.ring{--progress:0%;width:174px;height:174px;border-radius:50%;background:conic-gradient(#37bfac var(--progress),#ebf1f3 0);display:grid;place-items:center}.ring-center{width:143px;height:143px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column}.ring-value{font:800 39px 'Outfit',sans-serif;letter-spacing:-1.6px}.ring-caption{font-size:11px;color:#98a7b5;font-weight:700}
+    .activity-summary{display:flex;justify-content:space-between;font-size:12px;margin:16px 0 8px;color:#687c8e;font-weight:700}.mini-track{height:7px;background:#edf1f3;border-radius:8px;overflow:hidden}.mini-track > span{display:block;width:0;height:100%;background:#46bfae;border-radius:8px;transition:width .3s}
+    .detail-separator{height:1px;background:#eef1f3;margin:23px 0 18px}.detail-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:15px 0;font-size:12px}.detail-row span:first-child{color:#93a0ac}.detail-row span:last-child{font-weight:800;color:#293d4b;text-align:right}
+    .reset{margin-top:18px;border:1px solid #e9eef1;color:#6a8091;background:#fff;border-radius:11px;padding:11px 13px;width:100%;font-weight:800;font-size:11px}.reset:hover{background:#f9fbfd;color:#214d58}
+    .tip{margin-top:17px;font-size:11px;color:#9faab4;line-height:1.7;text-align:center}
+    .weekview{display:none;padding:17px;overflow-x:auto}.week-grid{display:grid;grid-template-columns:repeat(7,minmax(150px,1fr));gap:9px;min-width:1050px}.week-column{border-radius:13px;background:#f8fafb;padding:12px 9px;min-width:0}.week-column.selected{background:#eef8f6}.week-col-head{padding:2px 6px 11px;font-size:12px;font-weight:800}.week-col-date{color:#91a0ac;font-size:10px;margin-top:3px}.week-item{background:#fff;margin:5px 0;border-radius:8px;padding:10px 8px;border-left:3px solid #d3e0e9;min-height:62px}.week-item.workout{border-color:#edac89}.week-item.study{border-color:#899ee2}.week-item.class{border-color:#aa93de}.week-item.volunteer{border-color:#e5a2a9}.week-item.faith{border-color:#ae8bcf}.week-item.meal{border-color:#e4c387}.week-item.rest{border-color:#85accd}.week-item.personal{border-color:#85c6ab}.week-item.travel{border-color:#afbec9}.week-item .wt{color:#97a4af;font-size:9px;font-weight:700}.week-item .wn{font-size:11px;font-weight:800;margin-top:5px;line-height:1.4}
+    .week-legend{font-size:11px;color:#99a6b1;padding:0 17px 17px}
+    .footer{font-size:11px;color:#a5afbb;text-align:center;margin-top:32px}
+    @media(min-width:1500px){.hero{min-height:275px}.main{padding-top:42px}}
+    @media(max-width:1150px){.app{grid-template-columns:88px minmax(0,1fr)}.sidebar{padding:30px 13px}.logo{padding:0;justify-content:center}.logo-text,.side-label,.nav-btn .nav-text,.sidebar-bottom,.side-foot{display:none}.nav-btn{justify-content:center;padding:15px}.nav-icon{font-size:21px}.sidebar{gap:55px}.planner{grid-template-columns:minmax(0,1.45fr) minmax(240px,.8fr)}.main{padding-left:30px;padding-right:30px}}
+    @media(max-width:900px){.planner{grid-template-columns:1fr}.hero-inner{grid-template-columns:1fr 240px}.stat{padding:18px 15px}.stat-icon{width:37px;height:37px;font-size:19px}.stats{gap:10px}}
+    @media(max-width:680px){.app{grid-template-columns:1fr}.sidebar{position:static;height:auto;padding:13px 20px;display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:0}.logo-mark{width:34px;height:34px;border-radius:10px}.logo-text{display:block;font-size:21px}.sidebar nav,.side-foot{display:none}.sidebar-bottom{display:none}.main{padding:24px 16px 40px}.topbar{align-items:flex-start}.page-title{font-size:30px}.top-right{flex-direction:column;gap:5px;align-items:end}.tz{font-size:10px}.clock{min-width:134px;padding:10px 12px}.clock-time{font-size:16px}.clock-date{font-size:9px}.hero{padding:24px;min-height:0;margin-top:23px;border-radius:20px}.hero-inner{grid-template-columns:1fr;gap:19px}.hero-title{font-size:31px;margin:15px 0 10px}.hero-description{margin-bottom:13px}.next-card{min-height:0;padding:16px 17px}.next-time{font-size:20px;margin-top:7px}.next-count{margin-top:10px}.stats{grid-template-columns:repeat(2,1fr)}.stats .stat:last-child{grid-column:1/-1}.stat{min-height:105px}.stat-number{font-size:25px}.body-section{margin-top:30px}.days{gap:6px}.day-btn{padding:13px 1px 14px;border-radius:11px}.day-short{font-size:9px;letter-spacing:.3px}.day-date{font-size:20px;margin-top:5px}.panel-head{padding:17px 17px}.event-list{padding:5px 10px 12px}.event{grid-template-columns:52px 12px minmax(0,1fr) 23px;column-gap:7px;min-height:70px}.event:not(:last-child):before{left:64px}.event-main{padding:10px 6px;gap:5px}.event-title{font-size:11px}.event-dur{font-size:9px}.category{padding:4px 6px;font-size:8px}.time{font-size:10px}.event-spacer{padding-left:78px}.tiny-btn{padding:8px 10px}.section-title h2{font-size:21px}.planner{gap:14px}.sidepanel{padding:23px}.view-toggle button{padding:7px 9px}}
+    @media(max-width:390px){.category{display:none}.stat-icon{display:none}.top-right .tz{display:none}.clock{min-width:125px}.page-title{font-size:26px}.hero-title{font-size:27px}}
+    @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="logo" aria-label="Rhythm"><div class="logo-mark" aria-hidden="true"><svg width="25" height="25" viewBox="0 0 25 25" fill="none"><path d="M2 13h4l3-6 4.2 11L17 10l2 3h4" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span class="logo-text">rhythm<span>.</span></span></div>
+      <nav aria-label="Main navigation">
+        <div class="side-label">MY SPACE</div>
+        <div class="nav">
+          <button type="button" class="nav-btn active" id="navDashboard"><span class="nav-icon">◫</span><span class="nav-text">Dashboard</span></button>
+          <button type="button" class="nav-btn" id="navWeek"><span class="nav-icon">▦</span><span class="nav-text">Weekly planner</span></button>
+          <button type="button" class="nav-btn" id="navToday"><span class="nav-icon">◷</span><span class="nav-text">Jump to today</span></button>
+        </div>
+      </nav>
+      <div class="sidebar-bottom"><div class="sb-top"><span class="sun">✦</span> The little things add up</div><div class="sb-title">Show up for yourself.</div><p class="sb-desc">One activity at a time. One good day at a time.</p><span class="sb-pill">YOUR WEEKLY RHYTHM</span></div>
+      <div class="side-foot">Made for focused days ✦</div>
+    </aside>
+    <main class="main">
+      <header class="topbar">
+        <div><div class="eyebrow" id="welcomeLabel">YOUR PERSONAL DASHBOARD</div><h1 class="page-title">My weekly schedule <span style="color:#34bcab">✳</span></h1></div>
+        <div class="top-right"><div class="tz">● Asia / Singapore</div><div class="clock" aria-live="off"><div class="clock-time" id="clockTime">--:--:--</div><div class="clock-date" id="clockDate">Loading date...</div></div></div>
+      </header>
+
+      <section class="hero" aria-label="Current activity">
+        <div class="hero-inner">
+          <div>
+            <div class="live-indicator"><span class="pulse"></span> LIVE RIGHT NOW</div>
+            <h2 class="hero-title" id="currentTitle">Checking your schedule...</h2>
+            <p class="hero-description" id="currentDescription">Finding your current activity in Singapore time.</p>
+            <div class="hero-prog-track"><div class="hero-prog-fill" id="liveProgress"></div></div>
+            <div class="hero-prog-caption" id="liveProgressText">—</div>
+          </div>
+          <div class="next-card">
+            <div class="next-label">COMING UP NEXT ↗</div>
+            <div class="next-time" id="nextTime">--:--</div>
+            <div class="next-name" id="nextTitle">—</div>
+            <div class="next-count" id="nextCountdown">Calculating...</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="stats" aria-label="Selected day summary">
+        <article class="stat"><div><div class="stat-label">Activities completed</div><div class="stat-number" id="statCompleted">0 / 0</div><div class="stat-foot" id="statCompleteText">Track your progress</div></div><div class="stat-icon teal">✓</div></article>
+        <article class="stat"><div><div class="stat-label">Revision planned</div><div class="stat-number" id="statStudy">0h</div><div class="stat-foot">Time for focused learning</div></div><div class="stat-icon purple">▤</div></article>
+        <article class="stat"><div><div class="stat-label">Daily movement</div><div class="stat-number" id="statWorkout">—</div><div class="stat-foot" id="statWorkoutText">Movement &amp; fitness</div></div><div class="stat-icon orange">↗</div></article>
+      </section>
+
+      <section class="body-section" id="weeklyPlanner">
+        <div class="section-title"><div><h2>Your week at a glance</h2><div class="section-sub" id="weekRange">Choose a day to explore your schedule</div></div><button type="button" class="tiny-btn primary" id="jumpToday">↗ Today</button></div>
+        <div class="days" id="daySelector" role="group" aria-label="Choose a day of the week"></div>
+
+        <div class="planner">
+          <section class="panel" id="schedulePanel">
+            <div class="panel-head"><div><h3 id="scheduleHeading">Today's timeline</h3><p id="scheduleSubheading">Your planned activities, hour by hour</p></div><div class="view-toggle" role="group" aria-label="Schedule display"><button type="button" id="dayViewBtn" class="active" aria-pressed="true">Day</button><button type="button" id="weekViewBtn" aria-pressed="false">Week</button></div></div>
+            <div class="event-list" id="eventList"></div>
+            <div class="weekview" id="weekview"><div class="week-grid" id="weekGrid"></div></div>
+            <div class="week-legend" id="weekLegend" hidden>Full weekly timetable · Scroll sideways to see all seven days</div>
+          </section>
+          <aside class="panel sidepanel" aria-label="Daily progress">
+            <h3>Daily progress</h3><p class="subtitle" id="progressDate">Keep your streak going. Each tick is a little win.</p>
+            <div class="ring-area"><div class="ring" id="progressRing"><div class="ring-center"><div class="ring-value" id="ringValue">0%</div><div class="ring-caption">completed</div></div></div></div>
+            <div class="activity-summary"><span>Activities checked off</span><span id="progressCount">0 of 0</span></div><div class="mini-track"><span id="miniProgress"></span></div>
+            <div class="detail-separator"></div>
+            <div class="detail-row"><span>Wake-up target</span><span>6:00 AM</span></div>
+            <div class="detail-row"><span>Bedtime target</span><span>10:00 PM</span></div>
+            <div class="detail-row"><span>Scheduled activities</span><span id="activityCount">—</span></div>
+            <div class="detail-row"><span>Total revision</span><span id="revisionTime">—</span></div>
+            <button type="button" class="reset" id="resetDay">↻ Reset this day's checkmarks</button>
+            <div class="tip">Tip: Tick activities as you complete them. Your progress is saved in this browser for each date.</div>
+          </aside>
+        </div>
+      </section>
+      <footer class="footer">Built around your actual routine · Live in Singapore time (SGT / UTC+8) · Changes are stored on this device</footer>
+    </main>
+  </div>
+<script>
+'use strict';
+// Each entry: start time, end time, activity, category. All times are Singapore local time (24-hour).
+const A = (start,end,title,type) => ({start,end,title,type});
+const schedule = [
+  [ // Monday
+    A('06:00','07:00','Workout · Push day','workout'),A('07:00','07:30','Shower','personal'),A('07:30','08:00','Breakfast','meal'),
+    A('08:00','08:30','Travel to school','travel'),A('08:30','10:30','Revision in library','study'),A('10:30','11:00','Go to class','travel'),
+    A('11:00','13:00','SCA lesson','class'),A('13:00','14:00','Lunch','meal'),A('14:00','17:00','IFTC lesson','class'),
+    A('17:00','17:30','Travel home','travel'),A('17:30','18:30','Dinner','meal'),A('18:30','19:00','Shower','personal'),
+    A('19:00','21:30','Revision','study'),A('21:30','21:45','Prayers + Journal','faith')
+  ],
+  [ // Tuesday
+    A('06:00','07:00','Workout · Pull day','workout'),A('07:00','07:30','Shower','personal'),A('07:30','08:00','Breakfast','meal'),
+    A('08:00','08:30','Travel to school','travel'),A('08:30','09:00','Travel to class','travel'),A('09:00','12:00','BPIM lesson','class'),
+    A('12:00','14:00','Lunch','meal'),A('14:00','17:00','ITD lesson','class'),A('17:00','17:30','Travel home','travel'),
+    A('17:30','18:30','Dinner','meal'),A('18:30','19:00','Shower','personal'),A('19:00','21:30','Revision','study'),A('21:30','21:45','Prayers + Journal','faith')
+  ],
+  [ // Wednesday: user's 18:30 revision overlaps shower; revision starts at 19:00 instead.
+    A('06:00','07:00','Workout · Legs & Core day','workout'),A('07:00','07:30','Shower','personal'),A('07:30','08:00','Breakfast','meal'),
+    A('08:00','11:00','Revision','study'),A('11:00','12:00','Cook lunch','meal'),A('12:00','12:30','Travel to school','travel'),
+    A('12:30','13:00','Go to lesson','travel'),A('13:00','16:00','IF lesson','class'),A('16:00','16:30','Travel home','travel'),
+    A('16:30','17:30','Chill / rest','rest'),A('17:30','18:30','Dinner','meal'),A('18:30','19:00','Shower','personal'),
+    A('19:00','21:30','Revision','study'),A('21:30','21:45','Prayers + Journal','faith')
+  ],
+  [ // Thursday
+    A('06:00','07:00','Workout · Push day','workout'),A('07:00','07:30','Shower','personal'),A('07:30','08:00','Breakfast','meal'),
+    A('08:00','11:00','Revision','study'),A('11:00','12:00','Lunch','meal'),A('12:00','14:30','Revision','study'),
+    A('14:30','15:00','Travel to school','travel'),A('15:00','18:00','ERM lesson','class'),A('18:00','19:00','Dinner','meal'),
+    A('19:00','19:30','Travel home','travel'),A('19:30','20:00','Shower','personal'),A('20:00','21:30','Revision','study'),A('21:30','21:45','Prayers + Journal','faith')
+  ],
+  [ // Friday
+    A('06:00','07:00','Workout · Pull day','workout'),A('07:00','07:30','Shower','personal'),A('07:30','08:00','Breakfast','meal'),
+    A('08:00','09:30','Revision','study'),A('09:30','10:00','Travel to volunteer','travel'),A('10:00','17:00','Volunteer','volunteer'),
+    A('17:00','18:00','Dinner','meal'),A('18:00','18:30','Travel home','travel'),A('18:30','19:00','Shower','personal'),
+    A('19:00','21:30','Revision','study'),A('21:30','21:45','Prayers + Journal','faith')
+  ],
+  [ // Saturday
+    A('06:00','07:00','Workout · Legs & Core day','workout'),A('07:00','07:30','Shower','personal'),A('07:30','08:00','Breakfast','meal'),
+    A('08:00','08:30','Travel to OTH','travel'),A('08:30','12:30','Revision','study'),A('12:30','13:30','Lunch','meal'),
+    A('13:30','17:00','Revision','study'),A('17:00','19:00','Dinner','meal'),A('19:00','19:30','Travel home','travel'),
+    A('19:30','20:00','Shower','personal'),A('20:00','21:30','Revision','study'),A('21:30','21:45','Prayers + Journal','faith')
+  ],
+  [ // Sunday
+    A('06:00','06:20','Running','workout'),A('06:20','06:30','Shower','personal'),A('06:30','08:00','Church','faith'),
+    A('08:00','13:00','Revision','study'),A('13:00','14:30','Lunch','meal'),A('14:30','15:00','Travel home','travel'),
+    A('15:00','19:00','Revision','study'),A('19:00','20:00','Dinner','meal'),A('20:00','21:30','Revision','study'),
+    A('21:30','21:45','Prayers + Journal','faith')
+  ]
+];
+const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const SHORT = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const CATEGORIES = {workout:'Movement',study:'Revision',class:'Lesson',meal:'Meal',travel:'Travel',personal:'Routine',volunteer:'Volunteer',faith:'Mindfulness',rest:'Rest'};
+const qs = id => document.getElementById(id);
+const minutes = t => {const [h,m]=t.split(':').map(Number);return h*60+m;};
+const time12 = t => {const [h,m]=t.split(':').map(Number);return `${h%12||12}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`;};
+const duration = (mins) => mins >= 60 ? `${Math.floor(mins/60)}h${mins%60?` ${mins%60}m`:''}` : `${mins}m`;
+const longDate = (date) => new Intl.DateTimeFormat('en-SG',{timeZone:'UTC',weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(date);
+const sgClock = new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Singapore',weekday:'long',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
+const dateKey = d => d.toISOString().slice(0,10);
+function singaporeNow(){let values=Object.fromEntries(sgClock.formatToParts(new Date()).filter(p=>p.type!=='literal').map(p=>[p.type,p.value]));return {year:+values.year,month:+values.month,day:+values.day,weekday:values.weekday,hour:+values.hour,minute:+values.minute,second:+values.second,sec:+values.hour*3600+(+values.minute)*60+(+values.second)};}
+function mondayFor(sg){const d=new Date(Date.UTC(sg.year,sg.month-1,sg.day));const wd=(d.getUTCDay()+6)%7;d.setUTCDate(d.getUTCDate()-wd);return d;}
+function selectedDateObj(monday,i){const d=new Date(monday.getTime());d.setUTCDate(d.getUTCDate()+i);return d;}
+const initial=singaporeNow();
+let monday=mondayFor(initial),selectedIndex=DAYS.indexOf(initial.weekday),view='day';
+const weekDate = i => selectedDateObj(monday,i);
+const selectionKey = () => dateKey(weekDate(selectedIndex));
+let marks={};try{const parsed=JSON.parse(localStorage.getItem('rhythm_marks_v1')||'{}');if(parsed&&typeof parsed==='object')marks=parsed}catch(e){}
+const checked = (key,i)=> !!(marks[key]&&marks[key][i]);
+function toggleChecked(i,isChecked){const key=selectionKey();if(!marks[key])marks[key]={};if(isChecked)marks[key][i]=true;else delete marks[key][i];persist();renderStatic();}
+function persist(){try{localStorage.setItem('rhythm_marks_v1',JSON.stringify(marks))}catch(e){ /* browsing without storage */ }}
+const countDone = () => schedule[selectedIndex].reduce((n,_,i)=>n+(checked(selectionKey(),i)?1:0),0);
+function getLiveActivity(sg){
+  const dayIdx=DAYS.indexOf(sg.weekday),sec=sg.sec,events=schedule[dayIdx];
+  if(sec<6*3600){return {title:'Sleep & recharge',detail:'Resting up for another good day. Your first activity starts at 6:00 AM.',start:-2*3600,end:6*3600,type:'sleep'};}
+  if(sec>=22*3600){return {title:'Sleep & recharge',detail:'Your bedtime is 10:00 PM. Tomorrow begins at 6:00 AM.',start:22*3600,end:30*3600,type:'sleep'};}
+  for(let i=0;i<events.length;i++){
+    const event=events[i],start=minutes(event.start)*60,end=minutes(event.end)*60;
+    if(sec>=start&&sec<end){return {title:event.title,detail:`It's ${event.title.toLowerCase()} time. You've got this!`,start,end,type:event.type};}
+    if(sec<start){return {title:'A little breathing room',detail:`Your next activity begins at ${time12(event.start)}.`,start:(i?minutes(events[i-1].end):360)*60,end:start,type:'free'};}
+  }
+  return {title:'Wind down for bed',detail:'Take a moment to relax. Your 10:00 PM bedtime is coming up.',start:minutes(events[events.length-1].end)*60,end:22*3600,type:'free'};
+}
+function getNextActivity(sg){
+  const dayIdx=DAYS.indexOf(sg.weekday),sec=sg.sec;
+  // 10 PM is a fixed daily sleep anchor, 6 AM the morning start.
+  let next=schedule[dayIdx].find(e=>minutes(e.start)*60>sec);
+  if(next)return {title:next.title,time:next.start,seconds:minutes(next.start)*60-sec,day:dayIdx};
+  if(sec<22*3600)return {title:'Sleep / bedtime',time:'22:00',seconds:22*3600-sec,day:dayIdx};
+  const tomorrow=(dayIdx+1)%7;
+  return {title:schedule[tomorrow][0].title,time:'06:00',seconds:86400-sec+21600,day:tomorrow};
+}
+function countdown(s){s=Math.max(0,Math.floor(s));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),sec=s%60;return h?`${h}h ${String(m).padStart(2,'0')}m`:`${m}m ${String(sec).padStart(2,'0')}s`;}
+function renderLive(){
+  const now=singaporeNow(),clock=`${String(now.hour).padStart(2,'0')}:${String(now.minute).padStart(2,'0')}:${String(now.second).padStart(2,'0')}`;
+  qs('clockTime').textContent=clock;
+  qs('clockDate').textContent=`${now.weekday}, ${String(now.day).padStart(2,'0')} ${new Intl.DateTimeFormat('en-SG',{month:'short',timeZone:'UTC'}).format(new Date(Date.UTC(now.year,now.month-1,now.day)))}`;
+  const live=getLiveActivity(now),next=getNextActivity(now),percent=Math.min(100,Math.max(0,100*(now.sec-live.start)/(live.end-live.start)));
+  qs('currentTitle').textContent=live.title;
+  qs('currentDescription').textContent=live.detail;
+  qs('liveProgress').style.width=`${percent}%`;
+  qs('liveProgressText').textContent=`${Math.round(percent)}% through this block · ${countdown(live.end-now.sec)} remaining`;
+  qs('nextTime').textContent=time12(next.time);
+  qs('nextTitle').textContent=next.title;
+  qs('nextCountdown').textContent=`Starts in ${countdown(next.seconds)}`;
+  // Cross-midnight re-sync and refresh current-day highlighting.
+  if(now.day!==lastClockDay || now.month!==lastClockMonth || now.year!==lastClockYear){lastClockDay=now.day;lastClockMonth=now.month;lastClockYear=now.year;monday=mondayFor(now);selectedIndex=DAYS.indexOf(now.weekday);renderStatic();}
+  else if(selectedIndex===DAYS.indexOf(now.weekday) && view==='day' && lastActiveTitle!==live.title){renderTimeline();lastActiveTitle=live.title;}
+}
+let lastClockDay=initial.day,lastClockMonth=initial.month,lastClockYear=initial.year,lastActiveTitle='';
+function renderDays(){const now=singaporeNow(),todayKey=`${now.year}-${String(now.month).padStart(2,'0')}-${String(now.day).padStart(2,'0')}`;
+  qs('weekRange').textContent=`${new Intl.DateTimeFormat('en-SG',{month:'short',day:'numeric',timeZone:'UTC'}).format(weekDate(0))} – ${new Intl.DateTimeFormat('en-SG',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'}).format(weekDate(6))} · Singapore time`;
+  qs('daySelector').innerHTML=DAYS.map((day,i)=>`<button type="button" class="day-btn ${i===selectedIndex?'selected':''} ${dateKey(weekDate(i))===todayKey?'today':''}" data-day="${i}" aria-label="${day} ${weekDate(i).getUTCDate()}" aria-pressed="${i===selectedIndex}"><div class="day-short">${SHORT[i]}</div><div class="day-date">${weekDate(i).getUTCDate()}</div></button>`).join('');
+  qs('daySelector').querySelectorAll('[data-day]').forEach(btn=>btn.addEventListener('click',()=>selectDay(+btn.dataset.day)));
+}
+function renderStats(){const events=schedule[selectedIndex],done=countDone(),rev=events.filter(e=>e.type==='study').reduce((n,e)=>n+minutes(e.end)-minutes(e.start),0),movement=events.find(e=>e.type==='workout');
+  qs('statCompleted').textContent=`${done} / ${events.length}`;
+  qs('statCompleteText').textContent=`${Math.round(done/events.length*100)}% of this day's plan`;
+  qs('statStudy').textContent=duration(rev);
+  const movementText=movement?movement.title.replace('Workout · ',''): 'Rest day';
+  qs('statWorkout').textContent=movementText.includes('Legs')?'Legs & Core':movementText.includes('Running')?'Run':movementText.replace(' day','');
+  qs('statWorkoutText').textContent=movement.title==='Running'?'20-minute run':movement.title.startsWith('Workout')?'60-minute training session':'Recovery day';
+  const pct=Math.round(done/events.length*100);
+  qs('progressRing').style.setProperty('--progress',`${pct}%`);
+  qs('ringValue').textContent=`${pct}%`;
+  qs('miniProgress').style.width=`${pct}%`;
+  qs('progressCount').textContent=`${done} of ${events.length}`;
+  qs('activityCount').textContent=String(events.length);
+  qs('revisionTime').textContent=duration(rev);
+  qs('progressDate').textContent=`${DAYS[selectedIndex]} · ${new Intl.DateTimeFormat('en-SG',{day:'numeric',month:'long',timeZone:'UTC'}).format(weekDate(selectedIndex))}. Each tick is a little win.`;
+}
+function renderTimeline(){const events=schedule[selectedIndex],now=singaporeNow(),isToday=selectionKey()===`${now.year}-${String(now.month).padStart(2,'0')}-${String(now.day).padStart(2,'0')}`,nowMin=now.sec/60;
+  qs('eventList').innerHTML=events.map((event,i)=>{
+    const durationM=minutes(event.end)-minutes(event.start),current=isToday&&nowMin>=minutes(event.start)&&nowMin<minutes(event.end),done=checked(selectionKey(),i);
+    return `<div class="event ${current?'current':''} ${done?'done':''}">
+      <div class="time">${time12(event.start).replace(' ','<br>')}</div><div class="dot"></div>
+      <div class="event-main"><div><div class="event-title">${event.title} ${current?'<span class="now-tag">● NOW</span>':''}</div><div class="event-dur">${time12(event.start)} – ${time12(event.end)} · ${duration(durationM)}</div></div><span class="category ${event.type}">${CATEGORIES[event.type]}</span></div>
+      <input type="checkbox" class="checkbox" data-check="${i}" aria-label="Mark ${event.title} as complete" ${done?'checked':''}/></div>`;
+  }).join('')+'<div class="event-spacer">◌ &nbsp; 10:00 PM — Sleep</div>';
+  qs('eventList').querySelectorAll('[data-check]').forEach(cb=>cb.addEventListener('change',()=>toggleChecked(+cb.dataset.check,cb.checked)));
+}
+function renderWeek(){qs('weekGrid').innerHTML=schedule.map((events,i)=>`<div class="week-column ${i===selectedIndex?'selected':''}"><div class="week-col-head">${DAYS[i]}<div class="week-col-date">${new Intl.DateTimeFormat('en-SG',{day:'numeric',month:'short',timeZone:'UTC'}).format(weekDate(i))}</div></div>${events.map(ev=>`<div class="week-item ${ev.type}"><div class="wt">${ev.start} – ${ev.end}</div><div class="wn">${ev.title}</div></div>`).join('')}</div>`).join('');}
+function renderStatic(){renderDays();renderStats();qs('scheduleHeading').textContent=`${DAYS[selectedIndex]}'s timeline`;qs('scheduleSubheading').textContent=`${longDate(weekDate(selectedIndex))} · your activities in order`;renderTimeline();renderWeek();qs('eventList').style.display=view==='day'?'block':'none';qs('weekview').style.display=view==='week'?'block':'none';qs('weekLegend').hidden=view!=='week';qs('dayViewBtn').classList.toggle('active',view==='day');qs('weekViewBtn').classList.toggle('active',view==='week');qs('dayViewBtn').setAttribute('aria-pressed',String(view==='day'));qs('weekViewBtn').setAttribute('aria-pressed',String(view==='week'));}
+function selectDay(i){selectedIndex=i;renderStatic();}
+function today(){const now=singaporeNow();monday=mondayFor(now);selectedIndex=DAYS.indexOf(now.weekday);view='day';renderStatic();renderLive();}
+function setView(v){view=v;renderStatic();}
+qs('jumpToday').addEventListener('click',today);
+qs('navToday').addEventListener('click',()=>{today();qs('weeklyPlanner').scrollIntoView({behavior:'smooth'});});
+qs('navDashboard').addEventListener('click',()=>{setView('day');window.scrollTo({top:0,behavior:'smooth'});});
+qs('navWeek').addEventListener('click',()=>{setView('week');qs('weeklyPlanner').scrollIntoView({behavior:'smooth'});});
+qs('dayViewBtn').addEventListener('click',()=>setView('day'));
+qs('weekViewBtn').addEventListener('click',()=>setView('week'));
+qs('resetDay').addEventListener('click',()=>{if(!countDone())return;if(confirm(`Clear all checkmarks for ${DAYS[selectedIndex]}, ${new Intl.DateTimeFormat('en-SG',{day:'numeric',month:'short',timeZone:'UTC'}).format(weekDate(selectedIndex))}?`)){delete marks[selectionKey()];persist();renderStatic();}});
+document.addEventListener('keydown',e=>{if(['INPUT','TEXTAREA'].includes(document.activeElement.tagName)||e.ctrlKey||e.altKey||e.metaKey)return;if(e.key==='t'||e.key==='T')today();if(e.key==='ArrowLeft')selectDay(Math.max(0,selectedIndex-1));if(e.key==='ArrowRight')selectDay(Math.min(6,selectedIndex+1));});
+renderStatic();renderLive();setInterval(renderLive,1000);
+</script>
+</body>
+</html>
